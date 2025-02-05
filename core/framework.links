@@ -1,0 +1,80 @@
+# fabs, fmin, fmax
+
+#
+# CONSTANTS
+#
+
+var hwLeftKeyCode = 37;
+var hwRightKeyCode = 39;
+var hwUpKeyCode = 38;
+var hwDownKeyCode = 40;
+
+
+#
+# VECTOR
+#
+
+typename Vector2 = (Float, Float);
+
+fun vec2Add((vx,vy), (v2x, v2y)) {
+    (vx + v2x, vy + v2y)
+}
+
+fun vec2Sub((vx,vy), (v2x, v2y)) {
+    (vx - v2x, vy - v2y)
+}
+
+fun vec2Scale((vx,vy), s) {
+    (vx * s, vy + s)
+}
+
+#
+# AUX CANVAS
+#
+
+fun clear(ctx) {
+    jsClearRect(ctx, 0.0, 0.0, jsCanvasWidth(ctx), jsCanvasHeight(ctx))
+}
+
+
+#
+# UTIL FOR DEBUGGING
+#
+
+fun drawFps(ctx, fpsInfo, dFps) {
+    var fpsInfo = (fpsInfo with frameCount = fpsInfo.frameCount + 1);
+
+    jsFillText(ctx, "~FPS: " ^^ strsub(floatToString(dFps), 0, 7), 10.0, 40.0);
+
+    var fpsInfo = if (fpsInfo.loFps > dFps) {
+        (fpsInfo with loFps = dFps, loFpsFrame = fpsInfo.frameCount - 1)
+    }
+    else fpsInfo;
+
+    var fpsInfo = if (fpsInfo.hiFps < dFps)
+        (fpsInfo with hiFps = dFps)
+    else fpsInfo;
+
+    var fpsInfo = (fpsInfo with fpsAcc = fpsInfo.fpsAcc +. dFps);
+
+    var aFpsFrames = 1000;
+    var fpsInfo = if (fpsInfo.frameCount > aFpsFrames) {
+        (fpsInfo with avgFps = fpsInfo.fpsAcc /. intToFloat(aFpsFrames), fpsAcc = 0.0, frameCount = 0)
+    } else fpsInfo;
+
+    #jsFillText(ctx, "~AFPS: " ^^ strsub(floatToString(fpsInfo.avgFps), 0, 7), 100.0, 10.0);
+
+    var fpsInfo = if (fpsInfo.avgFps > 0.0) {
+        if (dFps < (fpsInfo.avgFps *. 0.5))
+            (fpsInfo with downFrames = fpsInfo.downFrames + 1)
+        else (fpsInfo with upFrames = fpsInfo.upFrames + 1)
+    } else (fpsInfo with hiFps = 0.0);
+    #jsFillText(ctx, "~loFPS: " ^^ strsub(floatToString(fpsInfo.loFps), 0, 7), 200.0, 10.0);
+    #jsFillText(ctx, "~hiFPS: " ^^ strsub(floatToString(fpsInfo.hiFps), 0, 7), 300.0, 10.0);
+    #jsFillText(ctx, "loFPS@: " ^^ intToString(fpsInfo.loFpsFrame), 400.0, 10.0);
+    #jsFillText(ctx, "~u: " ^^ strsub(intToString(fpsInfo.upFrames), 0, 7), 475.0, 10.0);
+    #jsFillText(ctx, "~d: " ^^ strsub(intToString(fpsInfo.downFrames), 0, 7), 525.0, 10.0);
+    #jsFillText(ctx, "~r: " ^^ strsub(floatToString(intToFloat(fpsInfo.upFrames)/.intToFloat(fpsInfo.downFrames)), 0, 7), 10.0, 30.0);
+
+    fpsInfo
+}

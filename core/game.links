@@ -1,0 +1,223 @@
+import Framework;
+# open import means no need to affix i.e. Framework.*
+
+typename Input = [| KeyUp: Int | KeyDown: Int | CarryOn |];
+
+typename Color = (Float, Float, Float, Float);
+
+typename ActorState = [| Idle | Normal |];
+typename Actor = (id: Int, pos: (Float, Float), dir: Float,
+                  state: ActorState, speed: Float, maxSpeed: Float,
+                  color: Color);
+
+
+typename Player = (x: Float, y: Float, r: Float,
+                     size: Float, speed: Float, color: String);
+
+typename GameMetaState = [| Running | Paused | Restart |];
+typename GameState = [| ProperGameState:(player: Player)
+                      | LostScreen | WonScreen |];
+typename Game = (state: GameState, metaState: GameMetaState, player: Player);
+
+# CANVAS PARAMETERS
+var canvasId = "gameCanvas";
+var canvas2Id = "gameCanvas2";
+var containerId = "gameContainer";
+
+var canvasWidth = 400.0;
+var canvasHeight = 400.0;
+
+var blockColor1 = "#4a4";
+var blockColor2 = "#aa4";
+
+var lives = 1;
+
+
+var initPlayer = (x = 200.0, y = 200.0, r = 0.0, size = 20.0, speed = 5.0, color = "#44a"): Player;
+
+
+
+fun playerRect(px) {
+    (x = px, y = player.y, width = player.size, height = player.size)
+}
+
+
+fun mainLoop() {
+    ()
+}
+
+fun drawFps(ctx, fpsInfo, dFps) {
+    var fpsInfo = (fpsInfo with frameCount = fpsInfo.frameCount + 1);
+
+    jsFillText(ctx, "~FPS: " ^^ strsub(floatToString(dFps), 0, 7), 10.0, 10.0);
+
+    var fpsInfo = if (fpsInfo.loFps > dFps) {
+        (fpsInfo with loFps = dFps, loFpsFrame = fpsInfo.frameCount - 1)
+    }
+    else fpsInfo;
+
+    var fpsInfo = if (fpsInfo.hiFps < dFps)
+        (fpsInfo with hiFps = dFps)
+    else fpsInfo;
+
+    var fpsInfo = (fpsInfo with fpsAcc = fpsInfo.fpsAcc +. dFps);
+
+    var aFpsFrames = 1000;
+    var fpsInfo = if (fpsInfo.frameCount > aFpsFrames) {
+        (fpsInfo with avgFps = fpsInfo.fpsAcc /. intToFloat(aFpsFrames), fpsAcc = 0.0, frameCount = 0)
+    } else fpsInfo;
+
+    jsFillText(ctx, "~AFPS: " ^^ strsub(floatToString(fpsInfo.avgFps), 0, 7), 100.0, 10.0);
+
+    var fpsInfo = if (fpsInfo.avgFps > 0.0) {
+        if (dFps < (fpsInfo.avgFps *. 0.5))
+            (fpsInfo with downFrames = fpsInfo.downFrames + 1)
+        else (fpsInfo with upFrames = fpsInfo.upFrames + 1)
+    } else (fpsInfo with hiFps = 0.0);
+    jsFillText(ctx, "~loFPS: " ^^ strsub(floatToString(fpsInfo.loFps), 0, 7), 200.0, 10.0);
+    jsFillText(ctx, "~hiFPS: " ^^ strsub(floatToString(fpsInfo.hiFps), 0, 7), 300.0, 10.0);
+    jsFillText(ctx, "loFPS@: " ^^ intToString(fpsInfo.loFpsFrame), 400.0, 10.0);
+    jsFillText(ctx, "~u: " ^^ strsub(intToString(fpsInfo.upFrames), 0, 7), 475.0, 10.0);
+    jsFillText(ctx, "~d: " ^^ strsub(intToString(fpsInfo.downFrames), 0, 7), 525.0, 10.0);
+    jsFillText(ctx, "~r: " ^^ strsub(floatToString(intToFloat(fpsInfo.upFrames)/.intToFloat(fpsInfo.downFrames)), 0, 7), 10.0, 30.0);
+
+    fpsInfo
+}
+
+fun swapBuffers(mainCanvasNode, dispCanvasNode) {
+    var ctx = jsGetContext2D(dispCanvasNode);
+    jsDrawImage(ctx, mainCanvasNode, 0.0, 0.0);
+
+    ignore(domSetStyleAttrFromRef(mainCanvasNode, "display", "block"));
+    ignore(domSetStyleAttrFromRef(dispCanvasNode, "display", "none"));
+    Framework.clear(ctx)
+}
+
+fun draw(gameState: GameState, lastTime, now, fpsInfo) {
+    var (mainCanvas, dispCanvas) =
+            if (domGetStyleAttrFromRef(getNodeById(canvasId), "display") == "none")
+                (canvasId, canvas2Id)
+            else (canvas2Id, canvasId);
+
+        var mainCanvasNode = getNodeById(mainCanvas);
+        var ctx = jsGetContext2D(mainCanvasNode);
+        Framework.clear(ctx);
+
+        jsCanvasFont(ctx, "28px Helvetica");
+
+        switch (gameState) {
+            case LostScreen ->
+                    jsSetFillColor(ctx, "black");
+                    jsFillText(ctx, "You lost. Press [R] to restart.", (canvasWidth / 2.0 - 180.0), (canvasHeight / 2.0))
+
+            case WonScreen ->
+                    jsSetFillColor(ctx, "black");
+                    jsFillText(ctx, "You won! Press [R] to restart.", (canvasWidth / 2.0 - 180.0), (canvasHeight / 2.0))
+
+            case ProperGameState(gs) ->
+                    # draw the player:
+                    jsSetFillColor(ctx, player.color);
+                    var playerRectangle = playerRect(gs.player.xPos);
+                    var halfPlayerHeight = player.size / 2.0;
+                    jsFillRect(ctx, playerRectangle.x + halfPlayerHeight, playerRectangle.y, playerRectangle.width - player.size, playerRectangle.height);
+                    jsFillCircle(ctx, playerRectangle.x + halfPlayerHeight , playerRectangle.y + halfPlayerHeight, halfPlayerHeight);
+                    jsFillCircle(ctx, playerRectangle.x + player.size - halfPlayerHeight, playerRectangle.y + halfPlayerHeight, halfPlayerHeight);
+
+                    # draw the blocks:
+                    #ignore(map(fun (x) { drawBlock(ctx, x) }, gs.blocks));
+
+                    # draw the ball:
+                    #jsSetFillColor(ctx, ballColor);
+                    #var (x, y) = (gs.ball).ballPos;
+                    #jsFillCircle(ctx, x, y, ballRadius)
+                    ()
+
+            case _ -> ()
+        };
+
+        var fpsInfo =
+            if (displayDebug) drawFps(ctx, fpsInfo, 1000.0 /. (intToFloat(now - lastTime) +. 1.0))
+            else fpsInfo;
+
+        swapBuffers(mainCanvasNode, getNodeById(dispCanvas));
+        fpsInfo
+}
+
+
+fun main() {
+
+
+    var gameProc = spawnClient { mainLoop() };
+
+
+    page
+        <html>
+            <head>
+                <meta charset="utf-8" />
+                <meta name="viewport" content="width=device-width, initial-scale=1" />
+                <title>VampSurvivors Clone</title>
+                <meta name="description" content="free source" />
+                <meta name="keywords" content="Built with Links!" />
+
+                <style>
+                    body {{
+                        background-color: #111;
+                        color: #ddd;
+                    }}
+
+                    a {{
+                        color: #d99;
+                    }}
+
+                    #info {{
+                        font-size: 48px;
+                    }}
+
+                    #container {{
+                        width: 50%;
+                        margin: auto;
+                        text-align: center;
+                    }}
+
+                    #{stringToXml(containerId)} {{
+                        position: relative;
+                        width: {stringToXml(floatToString(canvasWidth))}px;
+                        height: {stringToXml(floatToString(canvasHeight))}px;
+                        background-color: #444;
+                        margin: auto;
+                    }}
+
+                    #{stringToXml(canvas2Id)} {{
+                        display: none;
+                        position: absolute;
+                        top: 0px;
+                        left: 0px;
+                    }}
+
+                    #{stringToXml(canvasId)} {{
+                        display: block;
+                        position: absolute;
+                        top: 0px;
+                        left: 0px;
+                    }}
+                </style>
+            </head>
+            <body>
+                <div id="container">
+                    <h1>Vampire Survivors Clone in <i>Links</i></h1>
+
+                    <div id="{containerId}" tabindex="1">
+                        <canvas id="{canvas2Id}" width="{floatToString(canvasWidth)}" height="{floatToString(canvasHeight)}"></canvas>
+                        <canvas id="{canvasId}" width="{floatToString(canvasWidth)}" height="{floatToString(canvasHeight)}"></canvas>
+                        <div id="info">Click this canvas to start.</div>
+                    </div>
+                    <div id="msg"></div>
+                    <span>[F2] restarts the game</span><br />
+                    <span>[F4] snapshots the canvas</span><br />
+                    <a id="download" tabindex="2" download=""></a>
+                </div>
+            </body>
+        </html>
+}
+
+main()

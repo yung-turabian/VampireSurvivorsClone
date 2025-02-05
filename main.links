@@ -1,0 +1,9 @@
+import Breakout;
+
+fun main() {
+
+  addRoute("/", fun(_) { Breakout.main() });
+  servePages()
+}
+
+main()
