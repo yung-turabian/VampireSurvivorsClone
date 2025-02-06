@@ -1,2 +1,2 @@
 #!/usr/bin/bash
-links --path=core/ main.links
+links --path=core/ --path=core/GameBase/ --config=config main.links

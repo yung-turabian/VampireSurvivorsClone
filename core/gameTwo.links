@@ -1,0 +1,355 @@
+import Framework;
+
+typename Input = [| KeyUp: Int | KeyDown: Int | CarryOn |];
+
+#typename Planet = (x: Float, y: Float, r: Float);
+#typename PillType = [| Regular | Power |];
+
+#typename EntityState = [| Idle | Normal | Backward | Transition | Trapped | Vulnerable | Points | Eyes |];
+#typename EntityDescription = (idx: Int, position: Vector, planet: Planet, angle: Float,
+#                        dir: Float, speed: Float, baseSpeed: Float, r: Float, nextPlanet: Planet,
+#                        state: EntityState, timeout: Int, state2: EntityState, timeout2: Int);
+
+#typename Timeouts = (eaten: Int, trapped: Int, vulnerable: Int, transition: Int, eat: Int, idle: Int, ate: Int);
+
+typename GameMetaState = [| Run | Download | Restart |];
+typename GameState = [| On | Over | NextLevel | NextLevel2 | Won |];
+#typename Pill = (Planet,[(Float,Float,PillType)]);
+#typename Game = (pillman: EntityDescription, roger: EntityDescription,
+#                 johnny: EntityDescription, greg: EntityDescription,
+#                 bill: EntityDescription, pills: [Pill], pillCount: Int, score: Int,
+#                 lives: Int, level: Int, state: GameState, timeout: Int,
+#                 timeouts: Timeouts, metaState: GameMetaState);
+
+typename Game = (state: GameState, metaState: GameMetaState);
+
+var cont = (canvasId = "gameCanvas", 
+						canvas2Id = "gameCanvas2", 
+						containerId = "gameContainer"): Framework.Container;
+
+fun game() {
+		# SIMULATION SETTINGS
+		var doubleBuffer = true;
+		var step = 1.0 /. 60.0;
+		var initialFpsInfo = (frameCount=0, dFps=0.0, avgFps=0.0, fpsAcc=0.0,
+														loFps=1000000.0, hiFps=0.0, loFpsFrame=0, upFrames=0, downFrames=0);
+		var debug = true;
+
+		# INITIAL GAME STATE
+		#var rr = (bottomPlanet.r +. pillmanR +. margin);
+		#var pillmanDescription = (idx = 0, position = (bottomPlanet.x +. rr *. sin(pi), bottomPlanet.y +. rr *. cos(pi)),
+		#										planet = bottomPlanet, angle = pi, dir = 1.0,
+		#										baseSpeed = 0.02, speed = 0.02, r = pillmanR,
+		#										nextPlanet = bottomPlanet, state = Normal, timeout = 0,
+		#										state2 = Normal, timeout2 = 0): EntityDescription;
+
+		fun getInitialGameState() {
+				(state = On, metaState = Run): Game
+		}
+
+		fun draw(gameState: Game, lastTime, now, fpsInfo) {
+            # prepare canvas
+            var (mainCanvas, dispCanvas) =
+                if (domGetStyleAttrFromRef(getNodeById(cont.canvasId), "display") == "none" || not(doubleBuffer))
+                    (cont.canvasId, cont.canvas2Id)
+                else (cont.canvas2Id, cont.canvasId);
+            var ctx = jsGetContext2D(getNodeById(mainCanvas));
+
+            var pillmanColor = "#cc4";
+            var pupilColor = "#111";
+            var eyeColor = "#ddd";
+            var textColor = "#ddd";
+            var blinkColor = "#ddd";
+            var gameOverColor = "#c66";
+            var planetColor = "#115";
+            var highlightColor = "#282";
+
+            Framework.clear(ctx);
+
+            # drawing functions
+            
+
+            #
+            # DRAWING PART
+            #
+
+            # draw the HUD
+            jsSetFillColor(ctx, textColor);
+            #jsFillText(ctx, "Pills: " ^^ intToString(gameState.pillCount) ^^ "/" ^^ intToString(pillCount), 10.0, 30.0);
+            #jsFillText(ctx, "Score: " ^^ intToString(gameState.score), 10.0, 40.0);
+            #jsFillText(ctx, "Level: " ^^ intToString(gameState.level), 10.0, 50.0);
+
+            #if (gameState.lives < 0) {
+            #    jsSetFillColor(ctx, gameOverColor);
+            #    jsFillText(ctx, "GAME OVER", 10.0, 70.0)
+            #}
+            #else {
+            #    jsFillText(ctx, "Lives: " ^^ intToString(gameState.lives), 10.0, 70.0);
+
+
+            #    lsMapIgnore(fun (x) {
+            #        var x = intToFloat(x);
+            #        var pos = (20.0 +. x *. 2.5 *. pillmanR, 90.0);
+             #       drawPillman((pillmanDescription with position = pos, planet = (x = pos.1, y = pos.2, r = -.10.0)), (gameState with state = On))
+              #  }, intRange(0, gameState.lives - 1))
+            #};
+
+            # draw the game area
+            var drawOffset = (x = 108.0, y = 24.0);
+            jsSave(ctx);
+            jsTranslate(ctx, drawOffset.x, drawOffset.y);
+
+            # could also draw the static stuff statically -- predraw on a hidden canvas, then display that every frame
+            # draw the connections between planets
+            #jsBeginPath(ctx);
+            #jsStrokeStyle(ctx, "#222");
+            #Framework.lsMapIgnore(fun (x) {
+            #    jsMoveTo(ctx, x.1.x +. random(), x.1.y +. random());
+            #    jsLineTo(ctx, x.2.x +. random(), x.2.y +. random());
+            #    jsStroke(ctx)
+            #}, connections);
+            #jsClosePath(ctx);
+
+            # highlight the connection which pillman collides with
+            #if (gameState.pillman.planet == gameState.pillman.nextPlanet) ()
+            #else if (gameState.state == On) {
+            #    jsBeginPath(ctx);
+            #    jsStrokeStyle(ctx, highlightColor);
+            #    jsLineWidth(ctx, 4.0);
+            #    jsMoveTo(ctx, gameState.pillman.planet.x +. random(), gameState.pillman.planet.y +. random());
+            #    jsLineTo(ctx, gameState.pillman.nextPlanet.x +. random(), gameState.pillman.nextPlanet.y +. random());
+            #    jsStroke(ctx);
+            #    jsClosePath(ctx)
+            #} else ();
+
+            jsRestore(ctx);
+
+            # calculate and draw new fpsInfo
+            var dFps = 1000.0 /. (intToFloat(now - lastTime) +. 1.0);
+            jsSetFillColor(ctx, textColor);
+            var fpsInfo = if (debug) Framework.drawFps(ctx, fpsInfo, dFps) else fpsInfo; # debug
+
+            # double buffering
+            if (doubleBuffer) Framework.swapBuffers(mainCanvas, dispCanvas) else ();
+
+						fpsInfo
+        }
+
+		fun handleKey(k, gameState: Game) {
+				# for some reason pattern matching doesn't work (always selects the first option), so I use if-else
+				if (k == KeyDown(restartKeyCode))
+						(gameState with metaState = Restart)
+				else if (k == KeyDown(downloadKeyCode))
+						(gameState with metaState = Download)
+				#else if (gameState.state == On)
+				#		if (k == KeyDown(spaceKeyCode)) {
+				#				var gameState = changePillmanPlanet(gameState);
+#
+#								# change direction
+#								(gameState with pillman = (gameState.pillman with dir = -.gameState.pillman.dir))
+#						} else if (k == KeyDown(zKeyCode)) { # change dir
+#								(gameState with pillman = (gameState.pillman with dir = -.gameState.pillman.dir))
+#						} else if (k == KeyDown(xKeyCode)) { # change planet
+#								changePillmanPlanet(gameState)
+#						} else gameState
+				else gameState
+		}
+
+		fun handleKeys(i, gs: Game) {
+				if (length(i) > 0) fold_right(handleKey, gs, i)
+				else gs
+		}
+
+
+		fun mainGameLogic(gameState: Game, i) {
+            var gameState = handleKeys(i, gameState);
+
+            # helper functions
+           # fun ghostCollision(ghost) {
+            #    circleCircleCollision((gameState.pillman.position, pillmanR), (ghost.position, ghostR))
+            #}
+
+            #fun ghostToInt(ghost) {
+            #    if (ghost.state == Vulnerable) 1 else 2
+            #}
+
+            #fun eatPillman() {
+            #    (gameState with state = Eaten, timeout = gameState.timeouts.eaten, pillman = (gameState.pillman with state = Normal))
+            #}
+
+           # fun ghostToPoints(ghost, score) {
+            #    (ghost with state = Points, timeout = score, state2 = Normal, timeout2 = 0)
+            #}
+
+            #fun isEatState(ghost) {
+            #    ghost.state == Normal || ghost.state == Idle
+            #}
+
+            switch (gameState.state) {
+                case On ->
+                    # ai updating functions:
+                    # planet changing conditions
+                    # direction changing conditions
+                    # depending on state
+										gameState
+								case Over ->
+                    # on gameover
+                    gameState
+                case _ ->
+                    gameState
+            }
+        }
+
+		#
+		# PROCESSES
+		#
+		fun updateLogic(dt, gameState: Game, i) {
+				if (dt > step) {
+						var gameState = mainGameLogic(gameState, i);
+
+						updateLogic(dt -. step, gameState, [])
+				} else (gameState, dt)
+		}
+
+		fun updateState() {
+				fun mainLoop(gameState: Game, dt, lastTime, fpsInfo, ii) {
+						var now = clientTimeMilliseconds();
+						var dt = dt +. Framework.fmin(1.0, intToFloat(now - lastTime) /. 1000.0);
+
+						fun aux(auxi: [Input]) {
+								if (haveMail()) {
+										aux(recv()::auxi)
+								} else auxi
+						}
+
+						var i = aux(ii);
+
+						var (gameStatePrim, dtPrim) = updateLogic(dt, gameState, i);
+
+						if (gameStatePrim.metaState == Restart)
+								()
+						else if (dtPrim == dt) { # don't redraw if there were no logic updates
+								mainLoop(gameStatePrim, dtPrim, now, fpsInfo, i)
+						} else {
+								mainLoop(if (gameStatePrim.metaState == Download) (gameStatePrim with metaState = Run) else gameStatePrim,#(gameStatePrim with state = On), # if state == Download, reset
+										dtPrim, now,
+										draw(gameStatePrim, lastTime, now, fpsInfo), # draw & get new fpsInfo
+										[]) # reset input
+						}
+				}
+
+				var _ = recv(); # wait for initialize()
+				mainLoop(getInitialGameState(), 0.0, clientTimeMilliseconds(), initialFpsInfo, []);
+
+				if (not(haveMail())) self() ! CarryOn else (); # restart
+				updateState()
+		}
+		var updateProcId = spawn { updateState() };
+
+
+		fun onKeyDown(e) {
+				updateProcId ! (KeyDown(getCharCode(e)): Input)
+		}
+
+		fun onKeyUp(e) {
+				updateProcId ! (KeyUp(getCharCode(e)): Input)
+		}
+
+		fun initialize() {
+				var _ = recv();
+
+				jsSetOnKeyDown(getNodeById(cont.containerId), onKeyDown);
+				jsSetOnEvent(getNodeById(cont.containerId), "keyup", onKeyUp, true);
+
+				var _ = domSetStyleAttrFromRef(getNodeById("info"), "display", "none");
+
+				updateProcId ! CarryOn
+		}
+		initialize()
+}
+
+fun main() {
+
+
+    var canvasWidth = 600.0;
+    var canvasHeight = 480.0;
+
+
+    var initializeProcId = spawnClient { game() };
+
+    #
+    # PAGE
+    #
+    page
+        <html>
+            <head>
+            <style>
+                body {{
+                    background-color: #111;
+                    color: #ddd;
+                }}
+
+                a {{
+                    color: #d99;
+                }}
+
+                #info {{
+                    font-size: 48px;
+                }}
+
+                #container {{
+                    width: 50%;
+                    margin: auto;
+                    text-align: center;
+                }}
+
+                #{stringToXml(cont.containerId)} {{
+                    position: relative;
+                    width: {stringToXml(floatToString(canvasWidth))}px;
+                    height: {stringToXml(floatToString(canvasHeight))}px;
+                    background-color: #010101;
+                    margin: auto;
+                }}
+
+                #{stringToXml(cont.canvas2Id)} {{
+                    display: none;
+                    position: absolute;
+                    top: 0px;
+                    left: 0px;
+                }}
+
+                #{stringToXml(cont.canvasId)} {{
+                    display: block;
+                    position: absolute;
+                    top: 0px;
+                    left: 0px;
+                }}
+            </style>
+            </head>
+
+            <body>
+                <div id="container">
+                    <h1>Pen15</h1>
+
+                    <div id="{cont.containerId}" tabindex="1"
+                        l:onfocus="{initializeProcId ! 0}">
+                        <canvas id="{cont.canvas2Id}" width="{floatToString(canvasWidth)}" height="{floatToString(canvasHeight)}"></canvas>
+                        <canvas id="{cont.canvasId}" width="{floatToString(canvasWidth)}" height="{floatToString(canvasHeight)}"></canvas>
+                        <div id="info">Click this canvas to start.</div>
+                    </div>
+                    <div id="msg"></div>
+                    <span>The canvas above must be focused for the keyboard input to work.</span><br />
+                    <span>[SPACEBAR] controls Pillman</span><br />
+                    <span>or alternatively</span><br />
+                    <span>[Z] changes Pillman's direction and [X] changes Pillman's planet</span><br />
+                    <br />
+                    <span>[F2] restarts the game</span><br />
+                    <span>[F4] snapshots the canvas</span><br />
+                    <a id="download" tabindex="2" download=""></a>
+                </div>
+            </body>
+        </html>
+}
+
+
+main ()

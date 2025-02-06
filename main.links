@@ -1,8 +1,8 @@
-import Breakout;
+import GameTwo;
 
 fun main() {
 
-  addRoute("/", fun(_) { Breakout.main() });
+  addRoute("/", fun(_) { GameTwo.main() });
   servePages()
 }
 

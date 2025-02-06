@@ -1,0 +1,10 @@
+# KEYCODES
+var leftKeyCode = 37;
+var rightKeyCode = 39;
+var upKeyCode = 38;
+var downKeyCode = 40;
+var spaceKeyCode = 32;
+var zKeyCode = 90;
+var xKeyCode = 88;
+var restartKeyCode = 113;
+var downloadKeyCode = 115;

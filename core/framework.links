@@ -1,3 +1,5 @@
+import Input;
+
 # fabs, fmin, fmax
 
 #
@@ -14,19 +16,66 @@ var hwDownKeyCode = 40;
 # VECTOR
 #
 
-typename Vector2 = (Float, Float);
+typename Vector = (Float, Float);
 
-fun vec2Add((vx,vy), (v2x, v2y)) {
-    (vx + v2x, vy + v2y)
+fun vectorAdd((v1x, v1y), (v2x, v2y)) {
+    (v1x +. v2x, v1y +. v2y)
 }
 
-fun vec2Sub((vx,vy), (v2x, v2y)) {
-    (vx - v2x, vy - v2y)
+fun vectorSub((v1x, v1y), (v2x, v2y)) {
+    (v1x -. v2x, v1y -. v2y)
 }
 
-fun vec2Scale((vx,vy), s) {
-    (vx * s, vy + s)
+fun vectorMulS((v1x, v1y), s) {
+    (v1x *. s, v1y *. s)
 }
+
+fun vectorAddI((v1x, v1y), (v2x, v2y)) {
+    (v1x + v2x, v1y + v2y)
+}
+
+
+#
+# LISTS
+#
+
+fun lsMapIgnore(f, l) {
+    if (empty(l)) ()
+    else { var _ = f(hd(l)); lsMapIgnore(f, tl(l)) }
+}
+
+fun lsCatMaybes(l) {
+    if (empty(l)) []
+    else switch (hd(l)) {
+        case Just(x) -> x :: lsCatMaybes(tl(l))
+        case Nothing -> lsCatMaybes(tl(l))
+    }
+}
+
+#
+# MATH
+#
+sig fabs: (Float) -> Float
+fun fabs(x) {
+    if (x < 0.0) -.x else x
+}
+
+sig fmin: (Float, Float) -> Float
+fun fmin(a, b) {
+    if (a < b) a
+    else b
+}
+
+sig fmax: (Float, Float) -> Float
+fun fmax(a, b) {
+    if (a > b) a
+    else b
+}
+
+#
+# CONTAINER
+#
+typename Container = (canvasId: String, canvas2Id: String, containerId: String);
 
 #
 # AUX CANVAS
@@ -78,3 +127,14 @@ fun drawFps(ctx, fpsInfo, dFps) {
 
     fpsInfo
 }
+
+
+fun swapBuffers(mainCanvas, dispCanvas) {
+	var ctx = jsGetContext2D(getNodeById(dispCanvas));
+	jsDrawImage(ctx, getNodeById(mainCanvas), 0.0, 0.0);
+
+	var _ = domSetStyleAttrFromRef(getNodeById(mainCanvas), "display", "block");
+	var _ = domSetStyleAttrFromRef(getNodeById(dispCanvas), "display", "none");
+	clear(ctx)
+}
+
